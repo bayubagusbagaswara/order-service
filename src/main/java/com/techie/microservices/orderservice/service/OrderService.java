@@ -1,5 +1,6 @@
 package com.techie.microservices.orderservice.service;
 
+import com.techie.microservices.orderservice.client.InventoryClient;
 import com.techie.microservices.orderservice.dto.OrderRequest;
 import com.techie.microservices.orderservice.model.Order;
 import com.techie.microservices.orderservice.respository.OrderRepository;
@@ -13,15 +14,22 @@ import java.util.UUID;
 public class OrderService {
 
     private final OrderRepository orderRepository;
+    private final InventoryClient inventoryClient;
 
-    public void placeOrder(OrderRequest request) {
-        Order order = new Order();
-        order.setOrderNumber(UUID.randomUUID().toString());
-        order.setPrice(request.price());
-        order.setSkuCode(request.skuCode());
-        order.setQuantity(request.quantity());
+    public void placeOrder(OrderRequest orderRequest) {
+        boolean isProductInStock = inventoryClient.isInStock(orderRequest.skuCode(), orderRequest.quantity());
 
-        orderRepository.save(order);
+        if (isProductInStock) {
+            Order order = new Order();
+            order.setOrderNumber(UUID.randomUUID().toString());
+            order.setPrice(orderRequest.price());
+            order.setSkuCode(orderRequest.skuCode());
+            order.setQuantity(orderRequest.quantity());
+
+            orderRepository.save(order);
+        } else {
+            throw new RuntimeException("Product with SkuCode " + orderRequest.skuCode() + " is not in stock");
+        }
     }
 
 }
